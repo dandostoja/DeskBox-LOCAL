@@ -11,9 +11,16 @@ internal static class OfflineNetwork
 {
     internal const string ReasonPhrase = "DeskBox LOCAL offline mode";
 
-    internal static HttpClient CreateHttpClient(TimeSpan? timeout = null)
+    internal static HttpClient CreateHttpClient(
+        TimeSpan? timeout = null,
+        HttpMessageHandler? injectedHandler = null)
     {
-        var client = new HttpClient(new OfflineHttpMessageHandler(), disposeHandler: true);
+        // Production callers pass no handler and are hard-blocked offline.
+        // The optional handler is an internal test seam used by the existing
+        // transport unit tests; it is never supplied by normal application code.
+        var client = injectedHandler is null
+            ? new HttpClient(new OfflineHttpMessageHandler(), disposeHandler: true)
+            : new HttpClient(injectedHandler, disposeHandler: true);
         if (timeout is { } value)
         {
             client.Timeout = value;
