@@ -1,0 +1,131 @@
+name: DeskBox LOCAL OFFLINE x64
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/local-offline-x64.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    name: Validate and package LOCAL/OFFLINE x64
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 120
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+      RestoreLockedMode: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.303
+
+      - name: Verify LOCAL/OFFLINE hard gates
+        shell: pwsh
+        run: |
+          $errors = @()
+
+          $location = Get-Content .\src\DeskBox\Helpers\WindowsLocationHelper.cs -Raw
+          if ($location -notmatch 'Disabled in DeskBox LOCAL offline mode') {
+            $errors += 'Location hard-disable marker is missing.'
+          }
+
+          $glance = Get-Content .\src\DeskBox\Services\GlanceImageService.cs -Raw
+          if ($glance -notmatch 'private static bool CanUseBackgroundNetwork\(\) => false;') {
+            $errors += 'Glance background network is not hard-disabled.'
+          }
+
+          $runtimeFiles = Get-ChildItem .\src\DeskBox -Filter *.cs -Recurse -File
+          foreach ($file in $runtimeFiles) {
+            if ($file.FullName -like '*\OfflineNetwork.cs') { continue }
+            $text = Get-Content $file.FullName -Raw
+            if ($text -match 'new\s+HttpClient\s*\(' -or $text -match 'new\s+HttpClient\s*\{') {
+              $errors += "Direct HttpClient construction remains in runtime source: $($file.FullName)"
+            }
+          }
+
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            throw 'LOCAL/OFFLINE source audit failed.'
+          }
+
+          Write-Host 'LOCAL/OFFLINE source audit passed.'
+
+      - name: Restore
+        shell: pwsh
+        run: |
+          dotnet restore .\DeskBox.sln --locked-mode -p:Platform=x64 -p:RuntimeIdentifier=win-x64 --verbosity minimal
+
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet build .\src\DeskBox\DeskBox.csproj --configuration Release --no-restore -p:Platform=x64 -p:RuntimeIdentifier=win-x64 -v:minimal
+
+      - name: Test
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --configuration Release --no-restore -p:Platform=x64 -p:RuntimeIdentifier=win-x64 -p:WindowsAppSdkBootstrapInitialize=false --blame-hang --blame-hang-timeout 5m --logger "trx;LogFileName=local-offline-test-results.trx" -v:minimal
+
+      - name: Verify Rust and Inno Setup
+        shell: pwsh
+        run: |
+          rustc -vV
+          cargo --version
+          $iscc = @(
+            (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source,
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
+          if (-not $iscc) { throw 'Inno Setup compiler ISCC.exe not found.' }
+          Write-Host "Inno Setup: $iscc"
+
+      - name: Build audited x64 distribution
+        shell: pwsh
+        run: |
+          .\scripts\build-stage-7c1-distribution.ps1 -Platform x64 -OutputDirectory .\.artifacts\local-offline-x64
+
+      - name: Prepare LOCAL/OFFLINE installer artifact
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem .\.artifacts\local-offline-x64\direct-installer -Filter *.exe -File | Select-Object -First 1
+          if (-not $installer) { throw 'x64 installer was not produced.' }
+
+          New-Item -ItemType Directory -Force .\.artifacts\deliverable | Out-Null
+          $target = '.\.artifacts\deliverable\DeskBox_LOCAL_OFFLINE_x64.exe'
+          Copy-Item -LiteralPath $installer.FullName -Destination $target -Force
+
+          $hash = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
+          "$hash  DeskBox_LOCAL_OFFLINE_x64.exe" | Set-Content .\.artifacts\deliverable\DeskBox_LOCAL_OFFLINE_x64.sha256 -Encoding ascii
+
+          Write-Host "SHA256=$hash"
+
+      - name: Upload ready-to-install package
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeskBox_LOCAL_OFFLINE_x64
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            .artifacts/deliverable/DeskBox_LOCAL_OFFLINE_x64.exe
+            .artifacts/deliverable/DeskBox_LOCAL_OFFLINE_x64.sha256
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeskBox_LOCAL_OFFLINE_test_results
+          if-no-files-found: warn
+          retention-days: 30
+          path: tests/DeskBox.Tests/TestResults/**/*.trx
