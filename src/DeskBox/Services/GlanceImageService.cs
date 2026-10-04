@@ -706,24 +706,7 @@ public sealed class GlanceImageService
             image.OnlineCategory == category;
     }
 
-    private static bool CanUseBackgroundNetwork()
-    {
-        try
-        {
-            ConnectionProfile? profile = NetworkInformation.GetInternetConnectionProfile();
-            if (profile?.GetNetworkConnectivityLevel() != NetworkConnectivityLevel.InternetAccess)
-            {
-                return false;
-            }
-
-            NetworkCostType cost = profile.GetConnectionCost().NetworkCostType;
-            return cost is NetworkCostType.Unrestricted or NetworkCostType.Unknown;
-        }
-        catch
-        {
-            return true;
-        }
-    }
+    private static bool CanUseBackgroundNetwork() => false;
 
     private static bool IsSupportedImagePath(string path)
     {
