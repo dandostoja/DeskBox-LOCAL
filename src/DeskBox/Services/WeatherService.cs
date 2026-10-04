@@ -26,10 +26,8 @@ public sealed class WeatherService : IDisposable
 
     private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(30);
 
-    private static readonly HttpClient s_httpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(6)
-    };
+    private static readonly HttpClient s_httpClient =
+        OfflineNetwork.CreateHttpClient(TimeSpan.FromSeconds(6));
 
     private readonly WeatherCacheStore _cacheStore;
     private readonly object _cacheLoadSync = new();
