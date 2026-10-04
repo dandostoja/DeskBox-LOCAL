@@ -255,10 +255,7 @@ public sealed class ReleaseNotesService
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(10)
-        };
+        var client = OfflineNetwork.CreateHttpClient(TimeSpan.FromSeconds(10));
         client.DefaultRequestHeaders.UserAgent.ParseAdd("DeskBox-ReleaseNotes/1.0");
         return client;
     }
