@@ -27,7 +27,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
         string? updateRootPath = null,
         string? githubLatestReleaseApiUrl = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? OfflineNetwork.CreateHttpClient(TimeSpan.FromSeconds(20));
         _httpClient.Timeout = TimeSpan.FromSeconds(20);
         _httpClient.DefaultRequestHeaders.UserAgent.Clear();
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("DeskBox", GetCurrentAppVersion()));
