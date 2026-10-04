@@ -15,10 +15,8 @@ public static class WindowsLocationHelper
     internal static readonly TimeSpan SuccessfulResultReuseDuration = TimeSpan.FromHours(6);
     internal static readonly TimeSpan FailedResultReuseDuration = TimeSpan.FromMinutes(10);
     private static readonly object s_locationGate = new();
-    private static readonly HttpClient s_httpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(6)
-    };
+    private static readonly HttpClient s_httpClient =
+        Services.OfflineNetwork.CreateHttpClient(TimeSpan.FromSeconds(6));
     private static Task<(double Lat, double Lon, string Name)?>? s_inFlightLocationTask;
     private static (double Lat, double Lon, string Name)? s_cachedLocation;
     private static DateTimeOffset s_cachedLocationAtUtc;
