@@ -16,12 +16,8 @@ internal sealed class WebDavBackupTransport : ICloudBackupTransport
 {
     internal sealed record Options(Uri ServerUri, string Username, string? Password);
 
-    private static readonly HttpClient s_sharedClient = new()
-    {
-        // Backup archives carry user attachments; 100s is too tight for
-        // slow WebDAV endpoints.
-        Timeout = TimeSpan.FromMinutes(5)
-    };
+    private static readonly HttpClient s_sharedClient =
+        OfflineNetwork.CreateHttpClient(TimeSpan.FromMinutes(5));
 
     private static readonly XNamespace Dav = "DAV:";
 
