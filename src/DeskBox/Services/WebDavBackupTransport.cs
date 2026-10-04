@@ -52,7 +52,7 @@ internal sealed class WebDavBackupTransport : ICloudBackupTransport
         _options = options;
         _client = handler is null
             ? s_sharedClient
-            : new HttpClient(handler) { Timeout = s_sharedClient.Timeout };
+            : OfflineNetwork.CreateHttpClient(s_sharedClient.Timeout, handler);
         if (!string.IsNullOrEmpty(options.Username))
         {
             _authorization = new AuthenticationHeaderValue(
