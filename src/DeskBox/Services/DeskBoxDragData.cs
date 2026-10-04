@@ -25,10 +25,8 @@ public static class DeskBoxDragData
         "DeskBoxSourceStackKey";
     public const string SourceTodo = "todo";
     public const string SourceQuickCapture = "quick-capture";
-    private static readonly HttpClient s_virtualDropHttpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(30)
-    };
+    private static readonly HttpClient s_virtualDropHttpClient =
+        OfflineNetwork.CreateHttpClient(TimeSpan.FromSeconds(30));
 
     // Same ceiling the native path enforces: one dropped payload can never
     // materialize more than this onto disk or into memory.
