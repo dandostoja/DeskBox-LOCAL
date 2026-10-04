@@ -32,6 +32,10 @@ public static class WindowsLocationHelper
         Services.LocalizationService? localizationService = null,
         bool forceRefresh = false)
     {
+        App.LogVerbose("[WindowsLocation] Disabled in DeskBox LOCAL offline mode");
+        return Task.FromResult<(double Lat, double Lon, string Name)?>(null);
+
+#pragma warning disable CS0162
         lock (s_locationGate)
         {
             if (!forceRefresh &&
@@ -62,6 +66,7 @@ public static class WindowsLocationHelper
             _ = ResolveAndCacheLocationAsync(localizationService, completion);
             return completion.Task;
         }
+#pragma warning restore CS0162
     }
 
     private static async Task ResolveAndCacheLocationAsync(
