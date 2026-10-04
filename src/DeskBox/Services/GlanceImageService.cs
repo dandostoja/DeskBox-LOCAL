@@ -756,7 +756,7 @@ public sealed class GlanceImageService
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        var client = OfflineNetwork.CreateHttpClient(TimeSpan.FromSeconds(20));
         client.DefaultRequestHeaders.UserAgent.ParseAdd("DeskBox/1.4.8 (https://deskbox.fun)");
         return client;
     }
