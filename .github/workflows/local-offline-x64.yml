@@ -1,5 +1,5 @@
 name: DeskBox LOCAL OFFLINE x64
-# LOCAL/OFFLINE installer gate
+# LOCAL/OFFLINE installer gate - hardened
 
 on:
   workflow_dispatch:
